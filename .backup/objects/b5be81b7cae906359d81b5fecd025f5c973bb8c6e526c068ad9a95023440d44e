@@ -28,34 +28,28 @@ jobs:
         # Ensure gradlew has proper execution permissions
         chmod +x gradlew
         
-        # Store the original jar as backup before attempting to replace it
-        if [ -f "gradle/wrapper/gradle-wrapper.jar" ]; then
-          cp gradle/wrapper/gradle-wrapper.jar gradle/wrapper/gradle-wrapper.jar.bak
-          echo "Backed up original gradle-wrapper.jar"
-        fi
+        # Remove existing gradle-wrapper.jar
+        rm -f gradle/wrapper/gradle-wrapper.jar
         
         # Since Gradle 8.0+, the IDownload class has been removed from the wrapper JAR
         # We need to use an older but compatible version of the wrapper that still has IDownload
         # Let's try downloading Gradle 7.6.4 wrapper jar which should still have the IDownload class
-        echo "Attempting to download Gradle 7.6.4 wrapper jar which should contain IDownload class..."
+        echo "Downloading Gradle 7.6.4 wrapper jar which should contain IDownload class..."
         
         # Download Gradle 7.6.4 wrapper jar
-        if wget -q https://repo1.maven.org/maven2/org/gradle/gradle-wrapper/7.6.4/gradle-wrapper-7.6.4.jar -O gradle/wrapper/gradle-wrapper.new; then
+        if wget -q https://repo1.maven.org/maven2/org/gradle/gradle-wrapper/7.6.4/gradle-wrapper-7.6.4.jar -O gradle/wrapper/gradle-wrapper.jar; then
           echo "Successfully downloaded Gradle 7.6.4 wrapper jar from Maven Central"
-          mv gradle/wrapper/gradle-wrapper.new gradle/wrapper/gradle-wrapper.jar
         else
           echo "Failed to download Gradle 7.6.4 wrapper jar, trying Gradle 7.6 wrapper jar..."
-          if wget -q https://repo1.maven.org/maven2/org/gradle/gradle-wrapper/7.6/gradle-wrapper-7.6.jar -O gradle/wrapper/gradle-wrapper.new; then
+          if wget -q https://repo1.maven.org/maven2/org/gradle/gradle-wrapper/7.6/gradle-wrapper-7.6.jar -O gradle/wrapper/gradle-wrapper.jar; then
             echo "Successfully downloaded Gradle 7.6 wrapper jar from Maven Central"
-            mv gradle/wrapper/gradle-wrapper.new gradle/wrapper/gradle-wrapper.jar
           else
             echo "Failed to download both Gradle 7.6.4 and 7.6 wrapper jars"
-            # If downloads fail, restore the original jar from backup
-            if [ -f "gradle/wrapper/gradle-wrapper.jar.bak" ]; then
-              echo "Restoring original gradle-wrapper.jar from backup"
-              mv gradle/wrapper/gradle-wrapper.jar.bak gradle/wrapper/gradle-wrapper.jar
+            # As a last resort, use the original jar from our repository
+            if [ -f "gradle/wrapper/gradle-wrapper.jar" ] && [ -s "gradle/wrapper/gradle-wrapper.jar" ]; then
+              echo "Using existing gradle-wrapper.jar from repository"
             else
-              echo "ERROR: No gradle-wrapper.jar backup available"
+              echo "No gradle-wrapper.jar available"
               exit 1
             fi
           fi
@@ -72,7 +66,7 @@ jobs:
         fi
         jar -tf gradle/wrapper/gradle-wrapper.jar | grep -i GradleWrapperMain
         
-        # Verify the wrapper jar was copied/retained
+        # Verify the wrapper jar was copied
         ls -la gradle/wrapper/
         
         # Instead of creating the new gradlew script inline, let's modify the existing one with sed
