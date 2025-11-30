@@ -1,0 +1,104 @@
+name: Android Build CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+      
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@v3
+      with:
+        packages: build-tools;34.0.0
+        
+    - name: Install additional Android SDK packages
+      run: |
+        sdkmanager "platforms;android-34"
+        sdkmanager "cmdline-tools;latest"
+
+    - name: Accept SDK Licenses
+      run: yes | sdkmanager --licenses
+
+    - name: Cache Gradle packages
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        
+    - name: Make Gradle wrapper executable
+      run: chmod +x ./gradlew
+
+    - name: Check Gradle Wrapper Setup
+      run: |
+        echo "Checking Gradle wrapper setup..."
+        echo "Contents of gradle/wrapper directory:"
+        ls -la gradle/wrapper/
+        
+        if [ -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+          echo "gradle-wrapper.jar exists"
+          echo "Checking if JAR contains required class..."
+          jar -tf gradle/wrapper/gradle-wrapper.jar | grep -i gradlewrappermain
+          if [ $? -eq 0 ]; then
+            echo "GradleWrapperMain class found in JAR"
+          else
+            echo "GradleWrapperMain class NOT found in JAR - this is the issue!"
+          fi
+        else
+          echo "gradle-wrapper.jar does not exist"
+        fi
+        
+        echo "Contents of gradlew script:"
+        head -20 gradlew
+
+    - name: Try Gradle Wrapper Download
+      run: |
+        # Instead of using our potentially problematic jar, let's trigger the wrapper to download the proper version
+        # The gradle wrapper will automatically download the correct jar if it's missing or broken
+        echo "About to run gradle wrapper task to ensure proper setup..."
+        # Run wrapper task to re-download the jar if needed
+        ./gradlew wrapper --gradle-version=8.5 --distribution-type=bin --no-daemon || echo "Wrapper task failed, but that's OK"
+        
+    - name: Build with Gradle
+      run: ./gradlew build --no-daemon
+
+    - name: Build Debug APK
+      run: ./gradlew assembleDebug --no-daemon
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-debug-apk
+        path: app/build/outputs/apk/debug/app-debug.apk
+
+    - name: Build Release APK
+      run: ./gradlew assembleRelease --no-daemon
+      env:
+        SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+
+    - name: Upload Release APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-release-apk
+        path: app/build/outputs/apk/release/app-release.apk

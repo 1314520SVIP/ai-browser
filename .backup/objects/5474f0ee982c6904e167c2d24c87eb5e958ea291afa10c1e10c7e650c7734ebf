@@ -1,0 +1,129 @@
+name: Android Build CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Setup Gradle Wrapper
+      run: |
+        echo "Checking current gradle wrapper setup..."
+        ls -la gradle/wrapper/
+        
+        # Remove our potentially problematic gradle-wrapper.jar
+        if [ -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+          echo "Removing existing gradle-wrapper.jar"
+          rm -f gradle/wrapper/gradle-wrapper.jar
+        fi
+        
+        # Download gradle distribution to get the correct wrapper jar
+        echo "Downloading Gradle 8.5..."
+        wget https://services.gradle.org/distributions/gradle-8.5-bin.zip -O gradle-distribution.zip
+        
+        # Check if download was successful
+        if [ -f "gradle-distribution.zip" ]; then
+          echo "Download successful. Unzipping..."
+          unzip gradle-distribution.zip
+          
+          # List available wrapper jars in the distribution
+          echo "Looking for wrapper jars in the distribution..."
+          find gradle-8.5 -name "*wrapper*.jar" -type f
+          
+          # Copy the correct wrapper jar
+          if [ -f "gradle-8.5/lib/plugins/gradle-wrapper-8.5.jar" ]; then
+            echo "Found gradle-wrapper-8.5.jar, copying to project..."
+            cp gradle-8.5/lib/plugins/gradle-wrapper-8.5.jar gradle/wrapper/gradle-wrapper.jar
+          elif [ -f "gradle-8.5/lib/gradle-wrapper-shared-8.5.jar" ]; then
+            echo "Found gradle-wrapper-shared-8.5.jar, copying to project..."
+            cp gradle-8.5/lib/gradle-wrapper-shared-8.5.jar gradle/wrapper/gradle-wrapper.jar
+          else
+            # Use find to locate any wrapper jar
+            WRAPPER_JAR=$(find gradle-8.5 -name "*wrapper*.jar" -type f | head -n 1)
+            if [ -n "$WRAPPER_JAR" ]; then
+              echo "Found wrapper jar, copying: $WRAPPER_JAR"
+              cp "$WRAPPER_JAR" gradle/wrapper/gradle-wrapper.jar
+            else
+              echo "ERROR: No wrapper jar found in distribution"
+              exit 1
+            fi
+          fi
+        else
+          echo "ERROR: Failed to download Gradle distribution"
+          exit 1
+        fi
+        
+        # Verify the copied jar exists and list its contents
+        if [ -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+          echo "gradle-wrapper.jar successfully created"
+          ls -la gradle/wrapper/
+          echo "Checking contents of gradle-wrapper.jar for required classes:"
+          jar -tf gradle/wrapper/gradle-wrapper.jar | grep -i wrapper
+          jar -tf gradle/wrapper/gradle-wrapper.jar | grep -i IDownload
+        else
+          echo "ERROR: gradle-wrapper.jar was not created successfully"
+          exit 1
+        fi
+
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@v3
+      with:
+        packages: build-tools;34.0.0
+        
+    - name: Install additional Android SDK packages
+      run: |
+        sdkmanager "platforms;android-34"
+        sdkmanager "cmdline-tools;latest"
+
+    - name: Accept SDK Licenses
+      run: yes | sdkmanager --licenses
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Verify Gradle Wrapper Setup
+      run: |
+        echo "Contents of gradlew script:"
+        head -10 gradlew
+        echo "Contents of gradle-wrapper.properties:"
+        cat gradle/wrapper/gradle-wrapper.properties
+
+    - name: Build with Gradle
+      run: ./gradlew build --no-daemon
+
+    - name: Build Debug APK
+      run: ./gradlew assembleDebug --no-daemon
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-debug-apk
+        path: app/build/outputs/apk/debug/app-debug.apk
+
+    - name: Build Release APK
+      run: ./gradlew assembleRelease --no-daemon
+      env:
+        SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+
+    - name: Upload Release APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-release-apk
+        path: app/build/outputs/apk/release/app-release.apk

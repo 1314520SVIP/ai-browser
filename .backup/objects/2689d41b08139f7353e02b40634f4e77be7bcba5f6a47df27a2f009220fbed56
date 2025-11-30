@@ -1,0 +1,9 @@
+/**
+ * 此文件已移至 examples/BasicJavaExample.java
+ * 保留此文件占位符以确保构建系统正常工作
+ * Android应用使用MainActivity作为入口点，不需要main方法
+ */
+public class Main {
+    // This file has been moved to examples/BasicJavaExample.java
+    // Android app uses MainActivity as entry point, not main method
+}

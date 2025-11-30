@@ -1,0 +1,78 @@
+# AI Browser 部署指南
+
+## 项目概述
+AI Browser 是一个功能完备的安卓浏览器应用，提供了基础的网页浏览功能。
+
+## 项目结构
+- `app/` - 主应用模块
+- `gradle/` - Gradle包装器文件
+- `build.gradle` - 项目级构建配置
+- `settings.gradle` - 项目设置
+- `gradlew` - Linux/Mac平台的Gradle包装器脚本
+- `gradlew.bat` - Windows平台的Gradle包装器脚本
+
+## 构建配置
+- 编译SDK版本: 34
+- 最小SDK版本: 24
+- 目标SDK版本: 34
+- Gradle版本: 8.5
+
+## 主要组件
+- `MainActivity.java` - 主Activity，实现浏览器功能
+- `activity_main.xml` - 主界面布局
+- `AndroidManifest.xml` - 应用配置文件
+
+## 修改历史
+- 移除了不适用于Android项目的Main.java文件
+- 创建了MainActivity.java作为Android应用的入口点
+- 创建了activity_main.xml作为主界面布局
+- 配置了必要的权限和组件
+
+## 构建说明
+项目使用Gradle进行构建，可通过以下命令构建：
+
+```bash
+# 构建debug版本
+./gradlew assembleDebug
+
+# 构建release版本
+./gradlew assembleRelease
+
+# 安装到设备
+./gradlew installDebug
+```
+
+## 文件说明
+
+### MainActivity.java
+主Activity类，实现了：
+- WebView的初始化和配置
+- 基本的页面导航控制
+- 返回键处理
+
+### activity_main.xml
+主界面布局文件，包含：
+- WebView组件
+
+### AndroidManifest.xml
+应用配置文件，定义了：
+- 应用权限（INTERNET, ACCESS_NETWORK_STATE）
+- MainActivity为启动Activity
+- 应用图标和标签
+
+## 构建产物
+构建成功后将生成：
+- app-debug.apk: 调试版本APK
+- app-release.apk: 发布版本APK
+
+## 部署方式
+1. 使用Gradle命令构建项目
+2. 下载构建产物APK文件
+3. 在Android设备上安装使用
+
+## 开发说明
+项目遵循Android开发最佳实践：
+- 权限最小化原则
+- 响应式UI设计
+- 内存管理优化
+- 网络安全配置

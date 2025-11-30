@@ -1,0 +1,87 @@
+name: Android Build CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+      
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@v3
+      with:
+        packages: build-tools;34.0.0
+        
+    - name: Install additional Android SDK packages
+      run: |
+        sdkmanager "platforms;android-34"
+        sdkmanager "cmdline-tools;latest"
+
+    - name: Accept SDK Licenses
+      run: yes | sdkmanager --licenses
+
+    - name: Cache Gradle packages
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        
+    - name: Make Gradle wrapper executable
+      run: chmod +x ./gradlew
+
+    - name: Initialize Gradle Wrapper
+      run: |
+        # List wrapper directory contents to verify the jar file is present
+        ls -la gradle/wrapper/
+        # Check if gradle-wrapper.jar exists
+        if [ -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+          echo "gradle-wrapper.jar found in project"
+        else
+          echo "gradle-wrapper.jar not found in project"
+        fi
+        # Initialize gradle wrapper if needed
+        ./gradlew --version
+
+    - name: Build with Gradle
+      run: ./gradlew build
+
+    - name: Build Debug APK
+      run: ./gradlew assembleDebug
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-debug-apk
+        path: app/build/outputs/apk/debug/app-debug.apk
+
+    - name: Build Release APK
+      run: ./gradlew assembleRelease
+      env:
+        SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+
+    - name: Upload Release APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-release-apk
+        path: app/build/outputs/apk/release/app-release.apk

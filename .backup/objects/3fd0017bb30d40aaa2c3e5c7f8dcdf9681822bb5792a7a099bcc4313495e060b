@@ -1,0 +1,38 @@
+## AI Browser 项目概述
+
+### 项目类型
+这是一款Android浏览器应用，使用Android Studio和Gradle进行构建。
+
+### 项目结构
+- `app/` - 主应用模块
+- `gradle/` - Gradle包装器文件
+- `build.gradle` - 项目级构建配置
+- `settings.gradle` - 项目设置
+- `gradlew` - Linux/Mac平台的Gradle包装器脚本
+- `gradlew.bat` - Windows平台的Gradle包装器脚本
+
+### 构建配置
+- 编译SDK版本: 34
+- 最小SDK版本: 24
+- 目标SDK版本: 34
+- Gradle版本: 8.5
+
+### 问题诊断
+- 项目中存在一个`Main.java`文件，但这对于Android项目来说是不需要的
+- Android应用使用Activity作为入口点，而不是main方法
+- 这个文件可能是创建项目时的模板残留，需要移除或替换为适当的Activity
+
+### 修复建议
+1. 移除或重命名`Main.java`文件
+2. 创建适当的Android Activity作为应用入口点
+3. 确保AndroidManifest.xml正确配置了启动Activity
+
+### 构建状态
+- Gradle Wrapper已正确创建
+- 依赖配置看起来完整
+- 需要解决入口点文件冲突
+
+### 下一步
+- 移除`Main.java`文件或将其转换为适当的Android组件
+- 创建浏览器应用的主Activity
+- 配置基本的权限和组件

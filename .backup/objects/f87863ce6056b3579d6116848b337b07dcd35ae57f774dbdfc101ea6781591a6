@@ -1,0 +1,82 @@
+name: Android Build CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Download and setup Gradle manually
+      run: |
+        # Remove our potentially problematic gradle-wrapper.jar
+        rm -f gradle/wrapper/gradle-wrapper.jar
+        # Download gradle distribution and extract the correct wrapper jar
+        wget https://services.gradle.org/distributions/gradle-8.5-bin.zip
+        unzip gradle-8.5-bin.zip
+        # Find and copy the correct gradle wrapper jar
+        find gradle-8.5 -name "*wrapper*.jar" -exec cp {} gradle/wrapper/gradle-wrapper.jar \;
+        ls -la gradle/wrapper/
+        
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@v3
+      with:
+        packages: build-tools;34.0.0
+        
+    - name: Install additional Android SDK packages
+      run: |
+        sdkmanager "platforms;android-34"
+        sdkmanager "cmdline-tools;latest"
+
+    - name: Accept SDK Licenses
+      run: yes | sdkmanager --licenses
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Verify Gradle Wrapper JAR Contents
+      run: |
+        echo "Contents of gradle/wrapper directory after manual setup:"
+        ls -la gradle/wrapper/
+        echo "Checking if required classes exist in JAR:"
+        jar -tf gradle/wrapper/gradle-wrapper.jar | grep -i wrapper
+        jar -tf gradle/wrapper/gradle-wrapper.jar | grep -i IDownload || echo "IDownload class not found"
+
+    - name: Build with Gradle
+      run: ./gradlew build --no-daemon
+
+    - name: Build Debug APK
+      run: ./gradlew assembleDebug --no-daemon
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-debug-apk
+        path: app/build/outputs/apk/debug/app-debug.apk
+
+    - name: Build Release APK
+      run: ./gradlew assembleRelease --no-daemon
+      env:
+        SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+
+    - name: Upload Release APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-release-apk
+        path: app/build/outputs/apk/release/app-release.apk
