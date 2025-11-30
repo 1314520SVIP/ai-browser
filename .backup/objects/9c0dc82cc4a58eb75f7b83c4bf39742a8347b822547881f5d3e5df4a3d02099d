@@ -1,4 +1,4 @@
-name: Android Build CI
+name: Debug Android Build CI
 
 on:
   push:
@@ -83,7 +83,7 @@ jobs:
     - name: Set up Android SDK
       uses: android-actions/setup-android@v3
       with:
-        packages: build-tools;34.0.0, platforms;android-34, cmdline-tools;latest
+        packages: 'build-tools;34.0.0, platforms;android-34, cmdline-tools;latest'
 
     - name: Accept SDK Licenses
       run: yes | sdkmanager --licenses
@@ -97,89 +97,18 @@ jobs:
         grep -n "APP_HOME" gradlew || echo "APP_HOME variable not found in gradlew"
         head -20 gradlew
 
-    - name: Create missing directories and files if not present
-      run: |
-        echo "Ensuring all required directories exist..."
-        mkdir -p app/src/main/res/mipmap-mdpi
-        mkdir -p app/src/main/res/mipmap-hdpi
-        mkdir -p app/src/main/res/mipmap-xhdpi
-        mkdir -p app/src/main/res/mipmap-xxhdpi
-        mkdir -p app/src/main/res/mipmap-xxxhdpi
-        
-        # Create placeholder files if they don't exist
-        if [ ! -f "app/src/main/res/mipmap-mdpi/ic_launcher.png" ]; then
-          echo "Creating placeholder mipmap-mdpi/ic_launcher.png"
-          touch app/src/main/res/mipmap-mdpi/ic_launcher.png
-        fi
-        if [ ! -f "app/src/main/res/mipmap-hdpi/ic_launcher.png" ]; then
-          echo "Creating placeholder mipmap-hdpi/ic_launcher.png"
-          touch app/src/main/res/mipmap-hdpi/ic_launcher.png
-        fi
-        if [ ! -f "app/src/main/res/mipmap-xhdpi/ic_launcher.png" ]; then
-          echo "Creating placeholder mipmap-xhdpi/ic_launcher.png"
-          touch app/src/main/res/mipmap-xhdpi/ic_launcher.png
-        fi
-        if [ ! -f "app/src/main/res/mipmap-xxhdpi/ic_launcher.png" ]; then
-          echo "Creating placeholder mipmap-xxhdpi/ic_launcher.png"
-          touch app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-        fi
-        if [ ! -f "app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" ]; then
-          echo "Creating placeholder mipmap-xxxhdpi/ic_launcher.png"
-          touch app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-        fi
-        
-        if [ ! -f "app/src/main/res/mipmap-mdpi/ic_launcher_round.png" ]; then
-          echo "Creating placeholder mipmap-mdpi/ic_launcher_round.png"
-          touch app/src/main/res/mipmap-mdpi/ic_launcher_round.png
-        fi
-        if [ ! -f "app/src/main/res/mipmap-hdpi/ic_launcher_round.png" ]; then
-          echo "Creating placeholder mipmap-hdpi/ic_launcher_round.png"
-          touch app/src/main/res/mipmap-hdpi/ic_launcher_round.png
-        fi
-        if [ ! -f "app/src/main/res/mipmap-xhdpi/ic_launcher_round.png" ]; then
-          echo "Creating placeholder mipmap-xhdpi/ic_launcher_round.png"
-          touch app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
-        fi
-        if [ ! -f "app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png" ]; then
-          echo "Creating placeholder mipmap-xxhdpi/ic_launcher_round.png"
-          touch app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
-        fi
-        if [ ! -f "app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png" ]; then
-          echo "Creating placeholder mipmap-xxxhdpi/ic_launcher_round.png"
-          touch app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
-        fi
-
     - name: List project files
       run: |
-        echo "Project structure:"
+        echo "Listing project files..."
         find . -name "build.gradle" -type f
         echo "Contents of root build.gradle:"
         cat build.gradle
         echo "Contents of app/build.gradle:"
         cat app/build.gradle
-        echo "Contents of gradle.properties:"
-        cat gradle.properties
 
-    - name: Check Android Manifest
+    - name: Build with Gradle (with debug info)
       run: |
-        echo "Checking AndroidManifest.xml..."
-        cat app/src/main/AndroidManifest.xml
-
-    - name: Check resources
-      run: |
-        echo "Checking app resources..."
-        echo "Values in strings.xml:"
-        cat app/src/main/res/values/strings.xml
-        echo "Values in styles.xml:"
-        cat app/src/main/res/values/styles.xml
-        echo "Values in colors.xml:"
-        cat app/src/main/res/values/colors.xml
-        echo "Mipmap directories:"
-        ls -la app/src/main/res/mipmap-*/
-
-    - name: Build with Gradle
-      run: |
-        echo "Running gradlew with version info..."
+        echo "Running gradlew with debug info..."
         ./gradlew --version
         echo "Attempting to build the project..."
         ./gradlew build --no-daemon --info --stacktrace
