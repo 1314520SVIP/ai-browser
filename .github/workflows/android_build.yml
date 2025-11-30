@@ -28,22 +28,21 @@ jobs:
         # Ensure gradlew has proper execution permissions
         chmod +x gradlew
         
-        # Verify and fix APP_HOME in gradlew script using a more precise sed approach
-        echo "Verifying APP_HOME in gradlew script..."
+        # More comprehensive fix for gradlew script
+        echo "Verifying and fixing gradlew script..."
         
         # Backup the original script
         cp gradlew gradlew.bak
         
-        # Update APP_HOME line: replace any line that starts with APP_HOME= with the correct syntax
-        sed -i 's/APP_HOME=.*/APP_HOME=\$(dirname "\$0")/' gradlew
+        # Fix APP_HOME line - use more explicit sed pattern
+        sed -i 's/APP_HOME=.*/APP_HOME="\$(dirname "\$0")"/' gradlew
         
-        # Verify the change was made
-        APP_HOME_LINE=$(grep "APP_HOME=" gradlew)
-        echo "Current APP_HOME line: $APP_HOME_LINE"
+        # Also fix potential issues with command substitution syntax
+        sed -i 's/\`dirname "\$0"\`/"\$(dirname "\$0")"/g' gradlew
         
-        # Also fix any potential issues with the CLASSPATH line
-        sed -i 's|APP_HOME_PATH=\$APP_HOME|APP_HOME_PATH="$APP_HOME"|g' gradlew
-        sed -i 's|CLASSPATH=\$CLASSPATH|CLASSPATH="$CLASSPATH"|g' gradlew
+        # Fix any other unquoted variable usages
+        sed -i 's|APP_HOME_PATH=\$APP_HOME|APP_HOME_PATH="\$APP_HOME"|g' gradlew
+        sed -i 's|CLASSPATH=\$CLASSPATH|CLASSPATH="\$CLASSPATH"|g' gradlew
         
         # Remove our potentially problematic gradle-wrapper.jar
         if [ -f "gradle/wrapper/gradle-wrapper.jar" ]; then
@@ -65,12 +64,12 @@ jobs:
           find gradle-8.5 -name "*wrapper*.jar" -type f
           
           # Copy the correct wrapper jar - try different possible locations
-          if [ -f "gradle-8.5/lib/plugins/gradle-wrapper-8.5.jar" ]; then
-            echo "Found gradle-wrapper-8.5.jar, copying to project..."
-            cp gradle-8.5/lib/plugins/gradle-wrapper-8.5.jar gradle/wrapper/gradle-wrapper.jar
-          elif [ -f "gradle-8.5/lib/gradle-wrapper.jar" ]; then
+          if [ -f "gradle-8.5/lib/gradle-wrapper.jar" ]; then
             echo "Found gradle-wrapper.jar in lib directory, copying to project..."
             cp gradle-8.5/lib/gradle-wrapper.jar gradle/wrapper/gradle-wrapper.jar
+          elif [ -f "gradle-8.5/lib/plugins/gradle-wrapper-8.5.jar" ]; then
+            echo "Found gradle-wrapper-8.5.jar in plugins directory, copying to project..."
+            cp gradle-8.5/lib/plugins/gradle-wrapper-8.5.jar gradle/wrapper/gradle-wrapper.jar
           elif [ -f "gradle-8.5/lib/gradle-wrapper-shared-8.5.jar" ]; then
             echo "Found gradle-wrapper-shared-8.5.jar, copying to project..."
             cp gradle-8.5/lib/gradle-wrapper-shared-8.5.jar gradle/wrapper/gradle-wrapper.jar
@@ -101,6 +100,8 @@ jobs:
           
           echo "Checking gradlew script after modification:"
           grep -n "APP_HOME" gradlew || echo "APP_HOME not found in modified gradlew"
+          echo "Displaying start of gradlew script:"
+          head -60 gradlew
         else
           echo "ERROR: gradle-wrapper.jar was not created successfully"
           exit 1
@@ -207,16 +208,19 @@ jobs:
 
     - name: Build with Gradle
       run: |
-        echo "Running gradlew with version info..."
-        # Use a simple echo command first to test script
         echo "Testing gradlew script execution..."
-        ./gradlew --version || echo "Gradle version command failed, but continuing..."
+        # Before running build, verify gradlew is working properly
+        echo "#!/bin/bash" > test.sh
+        echo 'set -e' >> test.sh
+        echo 'echo "Testing gradlew..." && timeout 30 ./gradlew help --console=plain || echo "Gradle command completed (with potential timeout)"' >> test.sh
+        chmod +x test.sh
+        ./test.sh
         
         echo "Attempting to build the project..."
-        ./gradlew build --no-daemon --info --stacktrace
+        ./gradlew build --no-daemon --console=plain --info --stacktrace
 
     - name: Build Debug APK
-      run: ./gradlew assembleDebug --no-daemon --info --stacktrace
+      run: ./gradlew assembleDebug --no-daemon --console=plain --info --stacktrace
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
@@ -225,7 +229,7 @@ jobs:
         path: app/build/outputs/apk/debug/app-debug.apk
 
     - name: Build Release APK
-      run: ./gradlew assembleRelease --no-daemon --info --stacktrace
+      run: ./gradlew assembleRelease --no-daemon --console=plain --info --stacktrace
       env:
         SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
         SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
