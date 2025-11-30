@@ -106,6 +106,21 @@ jobs:
         echo "Contents of app/build.gradle:"
         cat app/build.gradle
 
+    - name: Check Android Manifest
+      run: |
+        echo "Checking AndroidManifest.xml..."
+        cat app/src/main/AndroidManifest.xml
+
+    - name: Check resources
+      run: |
+        echo "Checking app resources..."
+        echo "Values in strings.xml:"
+        cat app/src/main/res/values/strings.xml
+        echo "Values in styles.xml:"
+        cat app/src/main/res/values/styles.xml
+        echo "Values in colors.xml:"
+        cat app/src/main/res/values/colors.xml
+
     - name: Build with Gradle (with debug info)
       run: |
         echo "Running gradlew with debug info..."
