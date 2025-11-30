@@ -36,47 +36,20 @@ jobs:
         wget https://services.gradle.org/distributions/gradle-8.5-bin.zip -O gradle-8.5-bin.zip
         unzip gradle-8.5-bin.zip
         
-        # Find and copy the correct wrapper jar file - check for the actual wrapper jar in distribution
+        # Find and copy the correct wrapper jar file
         echo "Looking for wrapper jar in the distribution..."
         find gradle-8.5 -name "*wrapper*.jar" -type f
         
-        # List content of lib dir to see what's available
-        ls -la gradle-8.5/lib/
-        
-        # The correct wrapper jar is typically in lib folder, not in plugins
-        if [ -f "gradle-8.5/lib/gradle-wrapper-8.5.jar" ]; then
-          echo "Found gradle-wrapper-8.5.jar in lib, copying to project..."
-          cp gradle-8.5/lib/gradle-wrapper-8.5.jar gradle/wrapper/gradle-wrapper.jar
-        elif [ -f "gradle-8.5/lib/gradle-wrapper.jar" ]; then
+        # Copy the gradle-wrapper.jar from lib directory (this is the main wrapper jar)
+        if [ -f "gradle-8.5/lib/gradle-wrapper.jar" ]; then
           echo "Found gradle-wrapper.jar in lib directory, copying to project..."
           cp gradle-8.5/lib/gradle-wrapper.jar gradle/wrapper/gradle-wrapper.jar
         elif [ -f "gradle-8.5/lib/plugins/gradle-wrapper-8.5.jar" ]; then
           echo "Found gradle-wrapper-8.5.jar in plugins directory, copying to project..."
           cp gradle-8.5/lib/plugins/gradle-wrapper-8.5.jar gradle/wrapper/gradle-wrapper.jar
         else
-          # Last resort: search for any jar file containing "wrapper" in the name
-          wrapper_jar=$(find gradle-8.5 -name "*wrapper*.jar" -type f | head -n 1)
-          if [ -n "$wrapper_jar" ]; then
-            echo "Found wrapper jar: $wrapper_jar, copying to project..."
-            cp "$wrapper_jar" gradle/wrapper/gradle-wrapper.jar
-          else
-            echo "ERROR: Could not find gradle-wrapper.jar in distribution"
-            find gradle-8.5 -name "*.jar" -type f
-            exit 1
-          fi
-        fi
-        
-        # Verify the jar contents to ensure it has the required classes
-        echo "Checking contents of gradle-wrapper.jar for required classes:"
-        jar -tf gradle/wrapper/gradle-wrapper.jar | grep -i wrapper
-        jar -tf gradle/wrapper/gradle-wrapper.jar | grep -i IDownload
-        jar -tf gradle/wrapper/gradle-wrapper.jar | grep -i GradleWrapperMain
-        
-        # Check if jar file is valid
-        if jar -tf gradle/wrapper/gradle-wrapper.jar > /dev/null 2>&1; then
-          echo "gradle-wrapper.jar is valid"
-        else
-          echo "ERROR: gradle-wrapper.jar is invalid"
+          echo "ERROR: Could not find gradle-wrapper.jar in distribution"
+          find gradle-8.5 -name "*.jar" -type f
           exit 1
         fi
         
