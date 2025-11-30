@@ -1,0 +1,124 @@
+# AI Browser
+
+A simple yet powerful Android web browser application built with Java and Android SDK.
+
+## Features
+
+- Basic browsing functionality (back, forward, refresh)
+- URL navigation
+- Home button to return to default page
+- Modern UI with Material Design components
+- WebView-based browsing experience
+
+## Technical Details
+
+- Minimum SDK: 24 (Android 7.0)
+- Target SDK: 34 (Android 14)
+- Built with Android Gradle Plugin 8.1.4
+- Uses AndroidX libraries
+- WebView component for web rendering
+
+## Build Instructions
+
+1. Clone the repository
+2. Import the project in Android Studio
+3. Sync the Gradle files
+4. Build and run on your device or emulator
+
+To build from command line:
+```
+./gradlew build
+```
+
+To generate APK:
+```
+./gradlew assembleDebug
+```
+
+## Project Structure
+
+- `MainActivity.java` - Main activity with browser functionality
+- `activity_main.xml` - Layout with navigation controls and WebView
+- `AndroidManifest.xml` - Application configuration and permissions
+- `res/values/` - String, color and style resources
+
+## Permissions
+
+- `INTERNET` - Required for web browsing
+- `ACCESS_NETWORK_STATE` - To check network connectivity
+
+## Customization
+
+The default home page is set to Google, but this can be changed in MainActivity.java by modifying the URL in the buttonHome click listener and the initial webView.loadUrl() call.
+
+## GitHub Actions Build
+
+由于本地环境限制，我们可以通过GitHub Actions来构建项目并生成APK文件：
+
+1. 创建GitHub仓库并推送代码
+2. 在 `.github/workflows/` 目录下创建 `android_build.yml` 工作流文件
+3. 工作流将自动下载Android SDK、Gradle等必要工具并构建项目
+4. 构建成功后，APK将作为构建产物提供下载
+
+要使用GitHub Actions构建，请创建以下工作流文件：
+
+```yaml
+name: Android Build CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+      
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@v3
+      with:
+        packages: 'build-tools;34.0.0, platforms;android-34, cmdline-tools;latest'
+
+    - name: Accept SDK Licenses
+      run: yes | sdkmanager --licenses
+
+    - name: Build with Gradle
+      run: ./gradlew build
+
+    - name: Build Debug APK
+      run: ./gradlew assembleDebug
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-debug-apk
+        path: app/build/outputs/apk/debug/app-debug.apk
+
+    - name: Build Release APK
+      run: ./gradlew assembleRelease
+      env:
+        SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+
+    - name: Upload Release APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-release-apk
+        path: app/build/outputs/apk/release/app-release.apk
+```

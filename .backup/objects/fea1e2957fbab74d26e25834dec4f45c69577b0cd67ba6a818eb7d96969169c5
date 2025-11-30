@@ -1,0 +1,25 @@
+R_DEF: Internal format may change without notice
+local
+color black
+color purple_200
+color purple_500
+color purple_700
+color teal_200
+color teal_700
+color white
+drawable ic_launcher
+id buttonBack
+id buttonForward
+id buttonHome
+id buttonRefresh
+id editUrl
+id webView
+layout activity_main
+string action_settings
+string app_name
+string back
+string enter_url
+string forward
+string home
+string refresh
+style Theme.Browser

@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merger version="3"><dataSet config="main" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/data/user/0/com.ai.assistance.operit/files/workspace/ef37e9c8-1972-476a-9443-d93704de3745/app/src/main/shaders"/></dataSet><dataSet config="debug" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/data/user/0/com.ai.assistance.operit/files/workspace/ef37e9c8-1972-476a-9443-d93704de3745/app/src/debug/shaders"/></dataSet></merger>
