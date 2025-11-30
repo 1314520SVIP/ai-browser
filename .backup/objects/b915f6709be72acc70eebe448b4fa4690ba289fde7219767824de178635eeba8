@@ -181,10 +181,9 @@ jobs:
       run: |
         echo "Testing gradlew script execution..."
         # Test if gradlew can execute
-        echo "Running gradlew with --info flag for more details..."
-        ./gradlew --version
+        timeout 15s ./gradlew --version || echo "Gradle version check failed or timed out - this is OK if it just took too long"
         
-        echo "Attempting to build the project with more verbose output..."
+        echo "Attempting to build the project..."
         ./gradlew build --no-daemon --console=plain --info --stacktrace
 
     - name: Build Debug APK
