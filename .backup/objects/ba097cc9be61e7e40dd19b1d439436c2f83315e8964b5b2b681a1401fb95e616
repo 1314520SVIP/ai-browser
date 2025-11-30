@@ -25,19 +25,10 @@ jobs:
         echo "Checking current gradle wrapper setup..."
         ls -la gradle/wrapper/
         
-        # Ensure gradlew has proper execution permissions
-        chmod +x gradlew
-        
-        # Update gradlew script to ensure APP_HOME is properly defined
-        echo "Updating APP_HOME in gradlew script..."
+        # Set the APP_HOME variable in the gradlew script
         if [ -f "gradlew" ]; then
-          # Create a backup first
-          cp gradlew gradlew.bak
-          
-          # Replace the APP_HOME line with a more robust version
-          sed -i 's/^APP_HOME=.*/# Set APP_HOME to the directory of this script\nAPP_HOME=\$(dirname "\$0")/' gradlew
-          # Or if the above doesn't work because it's using backticks, let's add the replacement differently:
-          sed -i 's/APP_HOME=`dirname "\$0"`/# Set APP_HOME to the directory of this script\nAPP_HOME=\$(dirname "\$0")/' gradlew
+          echo "Setting APP_HOME variable in gradlew script..."
+          sed -i 's/^APP_HOME=.*/APP_HOME=$(cd "$(dirname "$0")" && pwd -P)/' gradlew
         fi
         
         # Remove our potentially problematic gradle-wrapper.jar
@@ -93,9 +84,6 @@ jobs:
           jar -tf gradle/wrapper/gradle-wrapper.jar | grep -i wrapper
           jar -tf gradle/wrapper/gradle-wrapper.jar | grep -i IDownload
           jar -tf gradle/wrapper/gradle-wrapper.jar | grep -i GradleWrapperMain
-          
-          echo "Checking gradlew script after modification:"
-          grep -n "APP_HOME" gradlew || echo "APP_HOME not found in modified gradlew"
         else
           echo "ERROR: gradle-wrapper.jar was not created successfully"
           exit 1
