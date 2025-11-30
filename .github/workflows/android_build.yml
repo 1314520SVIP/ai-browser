@@ -47,6 +47,19 @@ jobs:
     - name: Make Gradle wrapper executable
       run: chmod +x ./gradlew
 
+    - name: Initialize Gradle Wrapper
+      run: |
+        # List wrapper directory contents to verify the jar file is present
+        ls -la gradle/wrapper/
+        # Check if gradle-wrapper.jar exists
+        if [ -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+          echo "gradle-wrapper.jar found in project"
+        else
+          echo "gradle-wrapper.jar not found in project"
+        fi
+        # Initialize gradle wrapper if needed
+        ./gradlew --version
+
     - name: Build with Gradle
       run: ./gradlew build
 
