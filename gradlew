@@ -1,5 +1,3 @@
-#!/bin/sh
-
 # Copyright (c) 2015-present, Gradle Inc., Deactivated Code GmbH
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,15 +46,15 @@ case "`uname`" in
 esac
 
 # Set APP_HOME to the directory of this script
-APP_HOME=`dirname "$0"`
+APP_HOME="$(dirname "$0")"
 
 # For Cygwin or MSYS, switch paths to Windows format before running java
 if $cygwin || $msys ; then
     APP_HOME_PATH=`cygpath --path --mixed "$APP_HOME"`
     CLASSPATH=`cygpath --path --mixed "$CLASSPATH"`
 else
-    APP_HOME_PATH=$APP_HOME
-    CLASSPATH=$CLASSPATH
+    APP_HOME_PATH="$APP_HOME"
+    CLASSPATH="$CLASSPATH"
 fi
 
 # Determine the Java command to use to start the JVM.
@@ -102,7 +100,7 @@ if $darwin; then
     GRADLE_OPTS="$GRADLE_OPTS -Xdock:name=$APP_NAME -Xdock:icon=$APP_HOME/media/gradle.icns"
 fi
 
-CLASSPATH=$APP_HOME_PATH/gradle/wrapper/gradle-wrapper.jar
+CLASSPATH="$APP_HOME_PATH/gradle/wrapper/gradle-wrapper.jar"
 
 # Determine the Java command to use to start the JVM.
 if [ -n "$JAVA_HOME" ] ; then
