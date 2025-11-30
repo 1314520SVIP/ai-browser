@@ -47,21 +47,41 @@ jobs:
     - name: Make Gradle wrapper executable
       run: chmod +x ./gradlew
 
-    - name: Download Gradle Wrapper JAR if needed
+    - name: Check Gradle Wrapper Setup
       run: |
-        # Check if gradle-wrapper.jar contains the required class
+        echo "Checking Gradle wrapper setup..."
+        echo "Contents of gradle/wrapper directory:"
+        ls -la gradle/wrapper/
+        
         if [ -f "gradle/wrapper/gradle-wrapper.jar" ]; then
-          echo "gradle-wrapper.jar exists, checking contents..."
-          jar -tf gradle/wrapper/gradle-wrapper.jar | grep "org/gradle/wrapper/GradleWrapperMain.class" || echo "GradleWrapperMain.class not found in jar"
+          echo "gradle-wrapper.jar exists"
+          echo "Checking if JAR contains required class..."
+          jar -tf gradle/wrapper/gradle-wrapper.jar | grep -i gradlewrappermain
+          if [ $? -eq 0 ]; then
+            echo "GradleWrapperMain class found in JAR"
+          else
+            echo "GradleWrapperMain class NOT found in JAR - this is the issue!"
+          fi
         else
           echo "gradle-wrapper.jar does not exist"
         fi
+        
+        echo "Contents of gradlew script:"
+        head -20 gradlew
 
+    - name: Try Gradle Wrapper Download
+      run: |
+        # Instead of using our potentially problematic jar, let's trigger the wrapper to download the proper version
+        # The gradle wrapper will automatically download the correct jar if it's missing or broken
+        echo "About to run gradle wrapper task to ensure proper setup..."
+        # Run wrapper task to re-download the jar if needed
+        ./gradlew wrapper --gradle-version=8.5 --distribution-type=bin --no-daemon || echo "Wrapper task failed, but that's OK"
+        
     - name: Build with Gradle
-      run: ./gradlew build
+      run: ./gradlew build --no-daemon
 
     - name: Build Debug APK
-      run: ./gradlew assembleDebug
+      run: ./gradlew assembleDebug --no-daemon
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
@@ -70,7 +90,7 @@ jobs:
         path: app/build/outputs/apk/debug/app-debug.apk
 
     - name: Build Release APK
-      run: ./gradlew assembleRelease
+      run: ./gradlew assembleRelease --no-daemon
       env:
         SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
         SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
