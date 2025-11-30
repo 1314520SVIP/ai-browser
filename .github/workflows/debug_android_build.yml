@@ -25,6 +25,12 @@ jobs:
         echo "Checking current gradle wrapper setup..."
         ls -la gradle/wrapper/
         
+        # Set the APP_HOME variable in the gradlew script
+        if [ -f "gradlew" ]; then
+          echo "Setting APP_HOME variable in gradlew script..."
+          sed -i 's/^APP_HOME=.*/APP_HOME=$(cd "$(dirname "$0")" && pwd -P)/' gradlew
+        fi
+        
         # Remove our potentially problematic gradle-wrapper.jar
         if [ -f "gradle/wrapper/gradle-wrapper.jar" ]; then
           echo "Removing existing gradle-wrapper.jar"
@@ -44,10 +50,13 @@ jobs:
           echo "Looking for wrapper jars in the distribution..."
           find gradle-8.5 -name "*wrapper*.jar" -type f
           
-          # Copy the correct wrapper jar
+          # Copy the correct wrapper jar - try different possible locations
           if [ -f "gradle-8.5/lib/plugins/gradle-wrapper-8.5.jar" ]; then
             echo "Found gradle-wrapper-8.5.jar, copying to project..."
             cp gradle-8.5/lib/plugins/gradle-wrapper-8.5.jar gradle/wrapper/gradle-wrapper.jar
+          elif [ -f "gradle-8.5/lib/gradle-wrapper.jar" ]; then
+            echo "Found gradle-wrapper.jar in lib directory, copying to project..."
+            cp gradle-8.5/lib/gradle-wrapper.jar gradle/wrapper/gradle-wrapper.jar
           elif [ -f "gradle-8.5/lib/gradle-wrapper-shared-8.5.jar" ]; then
             echo "Found gradle-wrapper-shared-8.5.jar, copying to project..."
             cp gradle-8.5/lib/gradle-wrapper-shared-8.5.jar gradle/wrapper/gradle-wrapper.jar
