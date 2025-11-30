@@ -20,9 +20,17 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-      
+    - name: Download and setup Gradle manually
+      run: |
+        # Remove our potentially problematic gradle-wrapper.jar
+        rm -f gradle/wrapper/gradle-wrapper.jar
+        # Download gradle distribution and extract the correct wrapper jar
+        wget https://services.gradle.org/distributions/gradle-8.5-bin.zip
+        unzip gradle-8.5-bin.zip
+        # Find and copy the correct gradle wrapper jar
+        find gradle-8.5 -name "*wrapper*.jar" -exec cp {} gradle/wrapper/gradle-wrapper.jar \;
+        ls -la gradle/wrapper/
+        
     - name: Set up Android SDK
       uses: android-actions/setup-android@v3
       with:
@@ -36,47 +44,17 @@ jobs:
     - name: Accept SDK Licenses
       run: yes | sdkmanager --licenses
 
-    - name: Cache Gradle packages
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-        
-    - name: Make Gradle wrapper executable
-      run: chmod +x ./gradlew
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
 
-    - name: Check Gradle Wrapper Setup
+    - name: Verify Gradle Wrapper JAR Contents
       run: |
-        echo "Checking Gradle wrapper setup..."
-        echo "Contents of gradle/wrapper directory:"
+        echo "Contents of gradle/wrapper directory after manual setup:"
         ls -la gradle/wrapper/
-        
-        if [ -f "gradle/wrapper/gradle-wrapper.jar" ]; then
-          echo "gradle-wrapper.jar exists"
-          echo "Checking if JAR contains required class..."
-          jar -tf gradle/wrapper/gradle-wrapper.jar | grep -i gradlewrappermain
-          if [ $? -eq 0 ]; then
-            echo "GradleWrapperMain class found in JAR"
-          else
-            echo "GradleWrapperMain class NOT found in JAR - this is the issue!"
-          fi
-        else
-          echo "gradle-wrapper.jar does not exist"
-        fi
-        
-        echo "Contents of gradlew script:"
-        head -20 gradlew
+        echo "Checking if required classes exist in JAR:"
+        jar -tf gradle/wrapper/gradle-wrapper.jar | grep -i wrapper
+        jar -tf gradle/wrapper/gradle-wrapper.jar | grep -i IDownload || echo "IDownload class not found"
 
-    - name: Try Gradle Wrapper Download
-      run: |
-        # Instead of using our potentially problematic jar, let's trigger the wrapper to download the proper version
-        # The gradle wrapper will automatically download the correct jar if it's missing or broken
-        echo "About to run gradle wrapper task to ensure proper setup..."
-        # Run wrapper task to re-download the jar if needed
-        ./gradlew wrapper --gradle-version=8.5 --distribution-type=bin --no-daemon || echo "Wrapper task failed, but that's OK"
-        
     - name: Build with Gradle
       run: ./gradlew build --no-daemon
 
