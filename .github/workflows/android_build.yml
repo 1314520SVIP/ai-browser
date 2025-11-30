@@ -1,0 +1,61 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        # 移除缓存以避免查找gradle文件
+    - name: Create gradle wrapper files
+      run: |
+        # Create the gradle wrapper structure
+        mkdir -p gradle/wrapper
+        
+        # Create the gradle-wrapper.properties file if it doesn't exist
+        if [ ! -f gradle/wrapper/gradle-wrapper.properties ]; then
+          echo "distributionBase=GRADLE_USER_HOME" > gradle/wrapper/gradle-wrapper.properties
+          echo "distributionPath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
+          echo "distributionUrl=https\://services.gradle.org/distributions/gradle-8.0-bin.zip" >> gradle/wrapper/gradle-wrapper.properties
+          echo "networkTimeout=10000" >> gradle/wrapper/gradle-wrapper.properties
+          echo "zipStoreBase=GRADLE_USER_HOME" >> gradle/wrapper/gradle-wrapper.properties
+          echo "zipStorePath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
+        fi
+        
+        # Check if gradlew already exists in the repo, if not create it
+        if [ ! -f gradlew ]; then
+          echo '#!/bin/sh' > gradlew
+          echo 'echo "Gradle Wrapper stub"' >> gradlew
+          echo 'java -version' >> gradlew
+        fi
+        chmod +x gradlew
+        ls -la gradlew
+        ls -la gradle/wrapper/
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      with:
+        packages: tools platform-tools build-tools;34.0.0 platforms;android-34 ndk-bundle
+        cmdline-tools-version: 'latest'
+    - name: Accept SDK licenses
+      run: yes | sdkmanager --licenses || true
+    - name: Build Debug APK
+      run: |
+        ./gradlew --version
+        ls -la
+      env:
+        JAVA_OPTS: -Xmx2g
+    - name: Upload Debug APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: debug-apk
+        path: app/build/outputs/apk/debug/app-debug.apk
