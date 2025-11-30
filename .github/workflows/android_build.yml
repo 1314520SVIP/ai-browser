@@ -20,17 +20,65 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
-    - name: Download and setup Gradle manually
+    - name: Setup Gradle Wrapper
       run: |
-        # Remove our potentially problematic gradle-wrapper.jar
-        rm -f gradle/wrapper/gradle-wrapper.jar
-        # Download gradle distribution and extract the correct wrapper jar
-        wget https://services.gradle.org/distributions/gradle-8.5-bin.zip
-        unzip gradle-8.5-bin.zip
-        # Find and copy the correct gradle wrapper jar
-        find gradle-8.5 -name "*wrapper*.jar" -exec cp {} gradle/wrapper/gradle-wrapper.jar \;
+        echo "Checking current gradle wrapper setup..."
         ls -la gradle/wrapper/
         
+        # Remove our potentially problematic gradle-wrapper.jar
+        if [ -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+          echo "Removing existing gradle-wrapper.jar"
+          rm -f gradle/wrapper/gradle-wrapper.jar
+        fi
+        
+        # Download gradle distribution to get the correct wrapper jar
+        echo "Downloading Gradle 8.5..."
+        wget https://services.gradle.org/distributions/gradle-8.5-bin.zip -O gradle-distribution.zip
+        
+        # Check if download was successful
+        if [ -f "gradle-distribution.zip" ]; then
+          echo "Download successful. Unzipping..."
+          unzip gradle-distribution.zip
+          
+          # List available wrapper jars in the distribution
+          echo "Looking for wrapper jars in the distribution..."
+          find gradle-8.5 -name "*wrapper*.jar" -type f
+          
+          # Copy the correct wrapper jar
+          if [ -f "gradle-8.5/lib/plugins/gradle-wrapper-8.5.jar" ]; then
+            echo "Found gradle-wrapper-8.5.jar, copying to project..."
+            cp gradle-8.5/lib/plugins/gradle-wrapper-8.5.jar gradle/wrapper/gradle-wrapper.jar
+          elif [ -f "gradle-8.5/lib/gradle-wrapper-shared-8.5.jar" ]; then
+            echo "Found gradle-wrapper-shared-8.5.jar, copying to project..."
+            cp gradle-8.5/lib/gradle-wrapper-shared-8.5.jar gradle/wrapper/gradle-wrapper.jar
+          else
+            # Use find to locate any wrapper jar
+            WRAPPER_JAR=$(find gradle-8.5 -name "*wrapper*.jar" -type f | head -n 1)
+            if [ -n "$WRAPPER_JAR" ]; then
+              echo "Found wrapper jar, copying: $WRAPPER_JAR"
+              cp "$WRAPPER_JAR" gradle/wrapper/gradle-wrapper.jar
+            else
+              echo "ERROR: No wrapper jar found in distribution"
+              exit 1
+            fi
+          fi
+        else
+          echo "ERROR: Failed to download Gradle distribution"
+          exit 1
+        fi
+        
+        # Verify the copied jar exists and list its contents
+        if [ -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+          echo "gradle-wrapper.jar successfully created"
+          ls -la gradle/wrapper/
+          echo "Checking contents of gradle-wrapper.jar for required classes:"
+          jar -tf gradle/wrapper/gradle-wrapper.jar | grep -i wrapper
+          jar -tf gradle/wrapper/gradle-wrapper.jar | grep -i IDownload
+        else
+          echo "ERROR: gradle-wrapper.jar was not created successfully"
+          exit 1
+        fi
+
     - name: Set up Android SDK
       uses: android-actions/setup-android@v3
       with:
@@ -47,13 +95,12 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
-    - name: Verify Gradle Wrapper JAR Contents
+    - name: Verify Gradle Wrapper Setup
       run: |
-        echo "Contents of gradle/wrapper directory after manual setup:"
-        ls -la gradle/wrapper/
-        echo "Checking if required classes exist in JAR:"
-        jar -tf gradle/wrapper/gradle-wrapper.jar | grep -i wrapper
-        jar -tf gradle/wrapper/gradle-wrapper.jar | grep -i IDownload || echo "IDownload class not found"
+        echo "Contents of gradlew script:"
+        head -10 gradlew
+        echo "Contents of gradle-wrapper.properties:"
+        cat gradle/wrapper/gradle-wrapper.properties
 
     - name: Build with Gradle
       run: ./gradlew build --no-daemon
