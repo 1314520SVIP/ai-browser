@@ -47,6 +47,9 @@ case "`uname`" in
     ;;
 esac
 
+# Set APP_HOME to the directory of this script
+APP_HOME=`dirname "$0"`
+
 # For Cygwin or MSYS, switch paths to Windows format before running java
 if $cygwin || $msys ; then
     APP_HOME_PATH=`cygpath --path --mixed "$APP_HOME"`
