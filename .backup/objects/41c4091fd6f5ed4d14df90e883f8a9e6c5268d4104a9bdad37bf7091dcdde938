@@ -28,47 +28,37 @@ jobs:
         # Ensure gradlew has proper execution permissions
         chmod +x gradlew
         
-        # Since we're still having issues with the wrapper jar, let's try a different approach:
-        # Instead of manually replacing the wrapper jar, let's run the gradle wrapper task
-        # which will generate a proper wrapper jar for the specified version
-        
-        # First backup the current gradlew script
-        cp gradlew gradlew.bak
-        
-        # Temporarily use a minimal gradle-wrapper.properties that points to an older Gradle version
-        # which will ensure the generated wrapper jar has the IDownload class
-        echo "Creating temporary gradle-wrapper.properties for Gradle 7.6.4..."
-        cat > gradle/wrapper/gradle-wrapper.properties << 'EOF'
-distributionBase=GRADLE_USER_HOME
-distributionPath=wrapper/dists
-distributionUrl=https\://services.gradle.org/distributions/gradle-7.6.4-bin.zip
-zipStoreBase=GRADLE_USER_HOME
-zipStorePath=wrapper/dists
-EOF
-        
-        # Now we'll temporarily install a Gradle version to regenerate the wrapper
-        # Download and extract Gradle 7.6.4 to use its wrapper task
-        echo "Downloading Gradle 7.6.4 to regenerate wrapper..."
-        wget https://services.gradle.org/distributions/gradle-7.6.4-bin.zip -O gradle-7.6.4-bin.zip
-        unzip gradle-7.6.4-bin.zip
-        
-        # Restore the original gradlew script to make sure it doesn't have syntax issues
-        # that would prevent the wrapper command from running
-        echo "Restoring original gradlew script temporarily..."
-        # Use sed to fix the APP_HOME issue in our local gradlew script
-        sed -i 's/APP_HOME=`dirname "$0"`/APP_HOME="$(dirname "$0")"/' gradlew
-                
-        # Now use the extracted Gradle to run the wrapper task
-        echo "Using Gradle 7.6.4 to regenerate wrapper..."
-        ./gradlew wrapper --gradle-version 7.6.4 --distribution-type bin
-        
-        # Check if the wrapper was generated successfully
+        # Store the original jar as backup before attempting to replace it
         if [ -f "gradle/wrapper/gradle-wrapper.jar" ]; then
-          echo "Gradle wrapper jar was successfully regenerated"
-          ls -la gradle/wrapper/
+          cp gradle/wrapper/gradle-wrapper.jar gradle/wrapper/gradle-wrapper.jar.bak
+          echo "Backed up original gradle-wrapper.jar"
+        fi
+        
+        # Since Gradle 8.0+, the IDownload class has been removed from the wrapper JAR
+        # We need to use an older but compatible version of the wrapper that still has IDownload
+        # Let's try downloading Gradle 7.6.4 wrapper jar which should still have the IDownload class
+        echo "Attempting to download Gradle 7.6.4 wrapper jar which should contain IDownload class..."
+        
+        # Download Gradle 7.6.4 wrapper jar
+        if wget -q https://repo1.maven.org/maven2/org/gradle/gradle-wrapper/7.6.4/gradle-wrapper-7.6.4.jar -O gradle/wrapper/gradle-wrapper.new; then
+          echo "Successfully downloaded Gradle 7.6.4 wrapper jar from Maven Central"
+          mv gradle/wrapper/gradle-wrapper.new gradle/wrapper/gradle-wrapper.jar
         else
-          echo "ERROR: Gradle wrapper jar was not generated"
-          exit 1
+          echo "Failed to download Gradle 7.6.4 wrapper jar, trying Gradle 7.6 wrapper jar..."
+          if wget -q https://repo1.maven.org/maven2/org/gradle/gradle-wrapper/7.6/gradle-wrapper-7.6.jar -O gradle/wrapper/gradle-wrapper.new; then
+            echo "Successfully downloaded Gradle 7.6 wrapper jar from Maven Central"
+            mv gradle/wrapper/gradle-wrapper.new gradle/wrapper/gradle-wrapper.jar
+          else
+            echo "Failed to download both Gradle 7.6.4 and 7.6 wrapper jars"
+            # If downloads fail, restore the original jar from backup
+            if [ -f "gradle/wrapper/gradle-wrapper.jar.bak" ]; then
+              echo "Restoring original gradle-wrapper.jar from backup"
+              mv gradle/wrapper/gradle-wrapper.jar.bak gradle/wrapper/gradle-wrapper.jar
+            else
+              echo "ERROR: No gradle-wrapper.jar backup available"
+              exit 1
+            fi
+          fi
         fi
         
         # Check the jar content to confirm IDownload class is present
@@ -82,22 +72,12 @@ EOF
         fi
         jar -tf gradle/wrapper/gradle-wrapper.jar | grep -i GradleWrapperMain
         
-        # Now restore the original gradle-wrapper.properties to point back to Gradle 8.5
-        echo "Restoring original gradle-wrapper.properties with Gradle 8.5..."
-        cat > gradle/wrapper/gradle-wrapper.properties << 'EOF'
-distributionBase=GRADLE_USER_HOME
-distributionPath=wrapper/dists
-distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip
-zipStoreBase=GRADLE_USER_HOME
-zipStorePath=wrapper/dists
-EOF
-        
-        # Verify the wrapper jar was properly generated
+        # Verify the wrapper jar was copied/retained
         ls -la gradle/wrapper/
         
-        # Apply our gradlew script fixes again on the original script
-        echo "Reapplying gradlew script fixes..."
-        cp gradlew.bak gradlew
+        # Instead of creating the new gradlew script inline, let's modify the existing one with sed
+        echo "Fixing gradlew script with sed..."
+        cp gradlew gradlew.bak
         
         # Replace the problematic APP_HOME line with correct syntax
         sed -i 's/APP_HOME=`dirname "$0"`/APP_HOME="$(dirname "$0")"/' gradlew
@@ -105,6 +85,10 @@ EOF
         # Also fix any other potential issues
         sed -i 's/APP_HOME_PATH=\$APP_HOME/APP_HOME_PATH="\$APP_HOME"/g' gradlew
         sed -i 's/CLASSPATH=\$CLASSPATH/CLASSPATH="\$CLASSPATH"/g' gradlew
+        
+        # Verify the changes
+        echo "Changes made to gradlew:"
+        grep -n "APP_HOME" gradlew || echo "APP_HOME not found"
         
         # Ensure proper execution permissions
         chmod +x gradlew
